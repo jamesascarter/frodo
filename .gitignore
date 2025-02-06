@@ -3,4 +3,5 @@ corpus/*.txt
 corpus/*.pkl
 checkpoints/*.pth
 __pycache__
+_frodo.log
 wandb
