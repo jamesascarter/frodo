@@ -18,14 +18,14 @@ dev = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #
 #
 w2v = models.SkipGram(voc=len(words_to_ids), emb=128).to(dev)
-w2v.load_state_dict(torch.load('./checkpoints/3.w2v.pth'))
+w2v.load_state_dict(torch.load('./checkpoints/2025_02_06__18_31_03.0.70000.w2v.pth'))
 
 
 #
 #
 #
 two = models.Towers(emb=128).to(dev)
-two.load_state_dict(torch.load('./checkpoints/0.200.two.pth'))
+two.load_state_dict(torch.load('./checkpoints/2025_02_06__19_08_18.0.150.two.pth'))
 
 
 #
