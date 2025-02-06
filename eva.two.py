@@ -25,7 +25,7 @@ w2v.load_state_dict(torch.load('./checkpoints/2025_02_06__18_31_03.0.70000.w2v.p
 #
 #
 two = models.Towers(emb=128).to(dev)
-two.load_state_dict(torch.load('./checkpoints/2025_02_06__19_08_18.0.150.two.pth'))
+two.load_state_dict(torch.load('./checkpoints/2025_02_06__19_08_18.0.350.two.pth'))
 
 
 #
