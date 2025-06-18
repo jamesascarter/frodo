@@ -41,7 +41,7 @@ wandb.init(project='mlx6-week-02-mrc')
 ds = dataset.Window('./corpus/tokens.txt')
 dl = torch.utils.data.DataLoader(
     ds,
-    batch_size=1024,
+    batch_size=20000,
     shuffle=True,
     num_workers=12,  # Parallel data loading
     pin_memory=True,  # Faster data transfer to GPU
