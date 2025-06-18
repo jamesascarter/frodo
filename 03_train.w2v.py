@@ -39,7 +39,16 @@ wandb.init(project='mlx6-week-02-mrc')
 #
 #
 ds = dataset.Window('./corpus/tokens.txt')
-dl = torch.utils.data.DataLoader(ds, batch_size=1024, shuffle=True)
+dl = torch.utils.data.DataLoader(
+    ds,
+    batch_size=1024,
+    shuffle=True,
+    num_workers=12,  # Parallel data loading
+    pin_memory=True,  # Faster data transfer to GPU
+    prefetch_factor=2,  # Prefetch batches
+    persistent_workers=True,  # Keep workers alive between epochs
+    drop_last=True  # Drop incomplete batches
+)
 
 
 #
@@ -48,8 +57,8 @@ dl = torch.utils.data.DataLoader(ds, batch_size=1024, shuffle=True)
 for epoch in range(5):
   prgs = tqdm.tqdm(dl, desc=f"Epoch {epoch + 1}", leave=False)
   for idx, (inpt, trgs) in enumerate(prgs):
-    inpt, trgs = inpt.to(dev), trgs.to(dev)
-    rand = torch.randint(0, len(words_to_ids), (inpt.size(0), 2)).to(dev)
+    inpt, trgs = inpt.to(dev, non_blocking=True), trgs.to(dev, non_blocking=True)
+    rand = torch.randint(0, len(words_to_ids), (inpt.size(0), 2), device=dev)
     opt.zero_grad()
     loss = w2v(inpt, trgs, rand)
     loss.backward()
