@@ -41,13 +41,13 @@ wandb.init(project='mlx6-week-02-mrc')
 ds = dataset.Window('./corpus/tokens.txt')
 dl = torch.utils.data.DataLoader(
     ds,
-    batch_size=20000,
+    batch_size=4096,  # Reduced from 20000 to prevent GPU memory issues
     shuffle=True,
-    num_workers=12,  # Parallel data loading
-    pin_memory=True,  # Faster data transfer to GPU
-    prefetch_factor=2,  # Prefetch batches
-    persistent_workers=True,  # Keep workers alive between epochs
-    drop_last=True  # Drop incomplete batches
+    num_workers=8,  # Reduced workers to prevent memory issues
+    pin_memory=True,
+    prefetch_factor=2,
+    persistent_workers=True,
+    drop_last=True
 )
 
 
@@ -55,16 +55,24 @@ dl = torch.utils.data.DataLoader(
 #
 #
 for epoch in range(5):
-  prgs = tqdm.tqdm(dl, desc=f"Epoch {epoch + 1}", leave=False)
-  for idx, (inpt, trgs) in enumerate(prgs):
-    inpt, trgs = inpt.to(dev, non_blocking=True), trgs.to(dev, non_blocking=True)
-    rand = torch.randint(0, len(words_to_ids), (inpt.size(0), 2), device=dev)
-    opt.zero_grad()
-    loss = w2v(inpt, trgs, rand)
-    loss.backward()
-    opt.step()
-    wandb.log({'loss': loss.item()})
-    if idx % 10_000 == 0: torch.save(w2v.state_dict(), f'./checkpoints/{ts}.{epoch}.{idx}.w2v.pth')
+    prgs = tqdm.tqdm(dl, desc=f"Epoch {epoch + 1}", leave=False)
+    for idx, (inpt, trgs) in enumerate(prgs):
+        try:
+            inpt, trgs = inpt.to(dev, non_blocking=True), trgs.to(dev, non_blocking=True)
+            rand = torch.randint(0, len(words_to_ids), (inpt.size(0), 2), device=dev)
+            opt.zero_grad()
+            loss = w2v(inpt, trgs, rand)
+            loss.backward()
+            opt.step()
+            wandb.log({'loss': loss.item()})
+            if idx % 10_000 == 0: torch.save(w2v.state_dict(), f'./checkpoints/{ts}.{epoch}.{idx}.w2v.pth')
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                print(f"GPU OOM at batch {idx}. Trying to recover...")
+                torch.cuda.empty_cache()
+                continue
+            else:
+                raise e
 
 
 #
