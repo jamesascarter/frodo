@@ -48,7 +48,7 @@ class Window(torch.utils.data.Dataset):
 #
 class Triplets(torch.utils.data.Dataset):
   def __init__(self, embs, tkns):
-    self.embs = embs
+    self.embs = embs.to('cuda:0')
     self.tkns = tkns
     self.qrys = pickle.load(open('./corpus/qrys.pkl', 'rb'))
     self.docs = pickle.load(open('./corpus/docs.pkl', 'rb'))

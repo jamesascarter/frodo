@@ -2,3 +2,6 @@ datasets
 torch
 wandb
 more_itertools
+gensim
+numpy
+scikit-learn
