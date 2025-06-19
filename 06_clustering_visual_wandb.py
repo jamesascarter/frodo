@@ -26,13 +26,26 @@ for word in words:
         word_id = words_to_ids[word]
         with torch.no_grad():
             word_vector = w2v.emb(torch.tensor([word_id])).squeeze().numpy()
+        
+        # Check for NaN values and skip if found
+        if np.any(np.isnan(word_vector)):
+            print(f"Skipping word '{word}' due to NaN values in embedding")
+            continue
+            
         vectors.append(word_vector)
         valid_words.append(word)
 
 vectors = np.array(vectors)
 
+# Check if we have enough valid vectors
+if len(vectors) < 2:
+    print("Error: Not enough valid word vectors found. Check your model and vocabulary.")
+    exit(1)
+
+print(f"Processing {len(vectors)} valid word vectors out of {len(words)} words")
+
 # 5. Dimensionality reduction (t-SNE)
-tsne = TSNE(n_components=2, random_state=42)
+tsne = TSNE(n_components=2, random_state=42, perplexity=min(30, len(vectors)-1))
 vectors_2d = tsne.fit_transform(vectors)
 
 # 6. Initialize wandb
