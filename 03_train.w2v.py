@@ -53,15 +53,9 @@ logger.info(f"Dataset size: {len(ds)}")
 
 dl = torch.utils.data.DataLoader(
     ds,
-    batch_size=4096,
-    shuffle=True,
-    num_workers=8,
-    pin_memory=True,
-    prefetch_factor=2,
-    persistent_workers=True,
-    drop_last=True
+    batch_size=1024
 )
-logger.info(f"DataLoader configured with batch_size=4096, num_workers=8")
+logger.info(f"DataLoader configured with batch_size=1024, num_workers=1")
 
 # Training loop with comprehensive logging
 for epoch in range(5):
