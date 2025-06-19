@@ -16,6 +16,7 @@ import os
 #
 #
 # Set up logging
+ts = datetime.datetime.now().strftime('%Y_%m_%d__%H_%M_%S')
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
