@@ -110,7 +110,7 @@ def main():
     
     # Simple sweep config
     sweep_config = {
-        'method': 'bayesian',  # Simple random search
+        'method': 'bayes',  # Simple random search
         'metric': {
             'name': 'best_loss',
             'goal': 'minimize'
