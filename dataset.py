@@ -56,12 +56,21 @@ class Triplets(torch.utils.data.Dataset):
     self.d_keys = list(self.docs.keys())
     with open('./corpus/tokeniser.pkl', 'rb') as f: tkns = pickle.load(f)
     self.words_to_ids = tkns['words_to_ids']
+    
+    # Filter out queries and docs that would result in None embeddings
+    self.valid_indices = []
+    for idx in range(len(self.qrys)):
+      qry = self.qrys[self.q_keys[idx]]
+      pos = self.docs[qry['docs'][0]]
+      if self.to_emb(qry['text']) is not None and self.to_emb(pos) is not None:
+        self.valid_indices.append(idx)
 
   def __len__(self):
-    return len(self.qrys)
+    return len(self.valid_indices)
 
   def __getitem__(self, idx):
-    qry = self.qrys[self.q_keys[idx]]
+    actual_idx = self.valid_indices[idx]
+    qry = self.qrys[self.q_keys[actual_idx]]
     pos = self.docs[qry['docs'][0]]
     neg = self.docs[random.choice(self.d_keys)]
     qry = self.to_emb(qry['text'])
@@ -72,7 +81,7 @@ class Triplets(torch.utils.data.Dataset):
   def to_emb(self, text):
     text = self.preprocess(text)
     tkns = [self.tkns[t] for t in text if t in self.tkns]
-    if len(tkns) == 0: return
+    if len(tkns) == 0: return None
     tkns = torch.tensor(tkns).to('cuda:0')
     embs = self.embs(tkns)
     return embs.mean(dim=0)
