@@ -12,6 +12,8 @@ import logging
 import models
 import dataset
 import argparse
+import psutil
+import gc
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Save document embeddings to Redis')
@@ -124,20 +126,50 @@ logger.info("Loading dataset...")
 ds = dataset.Triplets(w2v.emb, words_to_ids)
 logger.info(f"Found {len(ds.d_keys)} documents")
 
-def save_doc_embedding_to_redis(doc_id, embedding, text):
+# Ensure RediSearch index exists
+try:
+    r.execute_command(f"FT.INFO doc_index")
+    logger.info(f"Index 'doc_index' exists")
+except redis.ResponseError:
+    logger.info(f"Creating index 'doc_index'...")
     try:
-        r.hset(doc_id, mapping={
-            'embedding': embedding.astype(np.float32).tobytes(),
-            'text': text,
-            'doc_id': doc_id
-        })
-    except Exception as e:
-        logger.error(f"Failed to save document {doc_id}: {e}")
-        return False
-    return True
+        # Create index with L2 distance and better HNSW parameters
+        r.execute_command(
+            "FT.CREATE doc_index ON HASH PREFIX 1 doc: "
+            f"SCHEMA embedding VECTOR HNSW 12 TYPE FLOAT32 "
+            f"DIM {emb_size} DISTANCE_METRIC L2 "
+            "text TEXT doc_id TAG"
+        )
+        logger.info(f"Index 'doc_index' created successfully")
+    except redis.ResponseError as e:
+        logger.error(f"Failed to create index: {e}")
+        raise
 
-# Process documents in batches
-batch_size = 32
+def save_batch_to_redis(doc_ids, embeddings, texts):
+    """Save a batch of documents to Redis in a pipeline."""
+    try:
+        pipe = r.pipeline(transaction=False)
+        for doc_id, embedding, text in zip(doc_ids, embeddings, texts):
+            pipe.hset(f"doc:{doc_id}", mapping={
+                'embedding': embedding.astype(np.float32).tobytes(),
+                'text': text,
+                'doc_id': f"doc:{doc_id}"
+            })
+        pipe.execute()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save batch: {e}")
+        return False
+
+def log_memory_usage():
+    """Log current memory usage"""
+    process = psutil.Process()
+    mem_info = process.memory_info()
+    logger.info(f"Memory usage: {mem_info.rss / 1024 / 1024:.2f} MB")
+
+# Process documents in larger batches
+batch_size = 512  # Increased from 128 for better throughput
+max_retries = 3   # Add retries for batch processing
 total_saved = 0
 total_failed = 0
 
@@ -148,37 +180,81 @@ num_test_docs = 5 if test_mode else None
 logger.info("Processing documents...")
 doc_keys = ds.d_keys[:num_test_docs] if test_mode else ds.d_keys
 logger.info(f"Will process {len(doc_keys)} documents {'(test mode)' if test_mode else ''}")
+log_memory_usage()
 
-for doc_key in tqdm(doc_keys, desc="Saving doc embeddings"):
-    try:
-        doc_text = ds.docs[doc_key]
-        logger.info(f"\nProcessing document: {doc_text[:100]}...")  # Show first 100 chars
-        
-        doc_emb = ds.to_emb(doc_text)
-        
-        if doc_emb is not None:
-            with torch.no_grad():  # Ensure we're in inference mode
-                doc_emb = two.doc(doc_emb).detach().cpu().numpy()
-            if save_doc_embedding_to_redis(f"doc:{doc_key}", doc_emb, doc_text):
-                total_saved += 1
-                logger.info(f"Successfully saved document {doc_key}")
-                logger.info(f"Embedding shape: {doc_emb.shape}")
-        else:
-            total_failed += 1
-            logger.warning(f"Could not generate embedding for document {doc_key}")
+# Process in batches
+for i in tqdm(range(0, len(doc_keys), batch_size), desc="Processing batches"):
+    retry_count = 0
+    while retry_count < max_retries:
+        try:
+            batch_keys = doc_keys[i:i + batch_size]
+            batch_texts = [ds.docs[key] for key in batch_keys]
+            batch_embs = []
+            valid_indices = []
+            valid_keys = []
+            valid_texts = []
+
+            # Process each document in the batch
+            for idx, (doc_key, doc_text) in enumerate(zip(batch_keys, batch_texts)):
+                try:
+                    doc_emb = ds.to_emb(doc_text)
+                    if doc_emb is not None:
+                        batch_embs.append(doc_emb)
+                        valid_indices.append(idx)
+                        valid_keys.append(doc_key)
+                        valid_texts.append(doc_text)
+                    else:
+                        total_failed += 1
+                except Exception as e:
+                    total_failed += 1
+                    continue
+
+            if batch_embs:
+                # Convert list of embeddings to tensor
+                batch_embs = torch.stack(batch_embs).to(dev)
+                
+                with torch.no_grad():  # Ensure we're in inference mode
+                    # Process entire batch through the model
+                    batch_embs = two.doc(batch_embs)
+                    # Normalize the embeddings
+                    batch_embs = torch.nn.functional.normalize(batch_embs, p=2, dim=1)
+                    batch_embs = batch_embs.detach().cpu().numpy()
+
+                # Save batch to Redis
+                if save_batch_to_redis(valid_keys, batch_embs, valid_texts):
+                    total_saved += len(valid_keys)
+                    if i % 10 == 0:  # Log every 10 batches
+                        logger.info(f"Successfully saved batch of {len(valid_keys)} documents")
+                        logger.info(f"Total saved so far: {total_saved}")
+                        log_memory_usage()
             
-    except Exception as e:
-        total_failed += 1
-        logger.error(f"Error processing document {doc_key}: {e}")
-        continue
-        
-    # Clear memory
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+            # Clear memory
+            del batch_embs, valid_indices, valid_keys, valid_texts
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            gc.collect()
+            
+            break  # Success - exit retry loop
+            
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                retry_count += 1
+                logger.warning(f"Out of memory error, retry {retry_count}/{max_retries}")
+                # Clear everything possible
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+                if retry_count == max_retries:
+                    logger.error("Failed after max retries, reducing batch size")
+                    batch_size = batch_size // 2
+                    retry_count = 0
+            else:
+                raise e
 
-logger.info(f"\nCompleted! Saved {total_saved} documents to Redis Cloud.")
-if total_failed > 0:
-    logger.warning(f"Failed to process {total_failed} documents.")
+logger.info(f"\nProcessing complete!")
+logger.info(f"Total documents saved: {total_saved}")
+logger.info(f"Total documents failed: {total_failed}")
+log_memory_usage()
 
 # Verify the saved documents
 logger.info("\nVerifying saved documents...")
