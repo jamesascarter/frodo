@@ -43,7 +43,7 @@ w2v = models.SkipGram(voc=len(words_to_ids), emb=128).to(dev)
 torch.save(w2v.state_dict(), f'./checkpoints/{ts}.0.w2v.pth')
 logger.info(f"Model parameters: {sum(p.numel() for p in w2v.parameters()):,}")
 
-opt = torch.optim.Adam(w2v.parameters(), lr=0.003)
+opt = torch.optim.Adam(w2v.parameters(), lr=0.001)
 wandb.init(project='mlx6-week-02-mrc')
 
 ds = dataset.Window('./corpus/tokens.txt')
@@ -51,7 +51,7 @@ logger.info(f"Dataset size: {len(ds)}")
 
 dl = torch.utils.data.DataLoader(
     ds,
-    batch_size=1024
+    batch_size=2048
 )
 logger.info(f"DataLoader configured with batch_size=1024, num_workers=1")
 

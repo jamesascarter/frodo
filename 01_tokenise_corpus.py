@@ -37,6 +37,18 @@ def preprocess(text: str) -> list[str]:
   words = [word for word in words if stats[word] > 5]
   return words
 
+def filter_corpus_to_top_words(corpus: list[str], top_n: int = 50000) -> list[str]:
+  """Filter corpus to only include the top N most frequent words."""
+  # Count word frequencies in the corpus
+  word_counts = collections.Counter(corpus)
+  
+  # Get the top N most frequent words
+  top_words = set(word for word, count in word_counts.most_common(top_n))
+  
+  # Filter corpus to only include top words
+  filtered_corpus = [word for word in corpus if word in top_words]
+  
+  return filtered_corpus
 
 #
 #
@@ -54,6 +66,14 @@ def create_lookup_tables(words: list[str]) -> tuple[dict[str, int], dict[int, st
 #
 #
 corpus: list[str] = preprocess(text8 + msmarco)
+print("INITIAL CORPUS SIZE:", len(corpus))
+print("INITIAL VOCAB SIZE:", len(set(corpus)))
+
+corpus = filter_corpus_to_top_words(corpus, 50000)
+print("FILTERED CORPUS SIZE:", len(corpus))
+print("FILTERED VOCAB SIZE:", len(set(corpus)))
+
+
 words_to_ids, ids_to_words = create_lookup_tables(corpus)
 tokeniser = tokeniser = { "words_to_ids": words_to_ids, "ids_to_words": ids_to_words }
 tokens: list[int] = [words_to_ids[word] for word in corpus]
@@ -64,4 +84,4 @@ with open('./corpus/tokeniser.pkl', 'wb') as f: pickle.dump(tokeniser, f)
 #
 #
 #
-print("VOCAB:", len(words_to_ids))
+print("FINAL VOCAB:", len(words_to_ids))
