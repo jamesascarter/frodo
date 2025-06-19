@@ -62,6 +62,7 @@ def train_sweep():
     if config.scheduler == 'cosine':
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=config.epochs)
     elif config.scheduler == 'step':
+        # Use step_size and gamma from config
         scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=config.step_size, gamma=config.gamma)
     else:
         scheduler = None
@@ -170,7 +171,7 @@ def train_sweep():
 def main():
     """Main function to set up and run the sweep"""
     
-    # Sweep configuration
+    # Simplified sweep configuration without conditional parameters
     sweep_config = {
         'method': 'bayes',  # 'grid', 'random', or 'bayes'
         'metric': {
@@ -205,6 +206,19 @@ def main():
             'scheduler': {
                 'values': ['none', 'cosine', 'step']
             },
+            'step_size': {
+                'values': [2, 3]
+            },
+            'gamma': {
+                'min': 0.1,
+                'max': 0.9,
+                'distribution': 'uniform'
+            },
+            'momentum': {
+                'min': 0.8,
+                'max': 0.99,
+                'distribution': 'uniform'
+            },
             'epochs': {
                 'value': 5
             },
@@ -218,29 +232,6 @@ def main():
                 'value': 0.1
             }
         }
-    }
-    
-    # Conditional parameters (only used if scheduler is 'step')
-    sweep_config['parameters']['step_size'] = {
-        'values': [2, 3],
-        'parent': 'scheduler',
-        'parent_values': ['step']
-    }
-    sweep_config['parameters']['gamma'] = {
-        'min': 0.1,
-        'max': 0.9,
-        'distribution': 'uniform',
-        'parent': 'scheduler',
-        'parent_values': ['step']
-    }
-    
-    # Conditional parameters (only used if optimizer is 'sgd')
-    sweep_config['parameters']['momentum'] = {
-        'min': 0.8,
-        'max': 0.99,
-        'distribution': 'uniform',
-        'parent': 'optimizer',
-        'parent_values': ['sgd']
     }
     
     # Initialize wandb
