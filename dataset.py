@@ -17,10 +17,19 @@ import time
 #
 #
 class Window(torch.utils.data.Dataset):
-  def __init__(self, path, size=5):
+  def __init__(self, path, size=5, fast_factor=0):
     self.path = path
     self.size = size
     with open(self.path, 'r') as f: self.tkns = list(map(int, f.read().strip().split()))
+    
+    if fast_factor > 0:
+        # Scale dataset size based on fast factor (0-100)
+        # At factor 100, use only 1% of data, at factor 1 use 99% of data
+        subset_size = int(len(self.tkns) * (1 - (fast_factor / 100)))
+        # Ensure we have at least 10K tokens
+        subset_size = max(10_000, subset_size)
+        self.tkns = self.tkns[:subset_size]
+    
     self.wins = list(more_itertools.windowed(self.tkns, n=size))
     m = (self.size - 1) // 2
     self.inps = [w[m] for w in self.wins]
@@ -73,8 +82,8 @@ class Triplets(torch.utils.data.Dataset):
     text = text.replace('.',  ' <PERIOD> ')
     text = text.replace(',',  ' <COMMA> ')
     text = text.replace('"',  ' <QUOTATION_MARK> ')
-    text = text.replace('“',  ' <QUOTATION_MARK> ')
-    text = text.replace('”',  ' <QUOTATION_MARK> ')
+    text = text.replace('"',  ' <QUOTATION_MARK> ')
+    text = text.replace('"',  ' <QUOTATION_MARK> ')
     text = text.replace(';',  ' <SEMICOLON> ')
     text = text.replace('!',  ' <EXCLAMATION_MARK> ')
     text = text.replace('?',  ' <QUESTION_MARK> ')
@@ -84,7 +93,7 @@ class Triplets(torch.utils.data.Dataset):
     text = text.replace('?',  ' <QUESTION_MARK> ')
     text = text.replace(':',  ' <COLON> ')
     text = text.replace("'",  ' <APOSTROPHE> ')
-    text = text.replace("’",  ' <APOSTROPHE> ')
+    text = text.replace("'",  ' <APOSTROPHE> ')
     return text.split()
 
 
