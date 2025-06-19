@@ -141,6 +141,9 @@ if use_wandb:
         logger.warning(f"Failed to initialize wandb: {e}")
         logger.info("Continuing without wandb logging")
         use_wandb = False
+    batch_size=1024
+)
+logger.info(f"DataLoader configured with batch_size=1024, num_workers=1")
 
 # Training loop with comprehensive logging
 logger.info("\nStarting training loop...")
