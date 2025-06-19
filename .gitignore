@@ -5,3 +5,5 @@ checkpoints/*.pth
 __pycache__
 _frodo.log
 wandb
+.env/
+logs/
