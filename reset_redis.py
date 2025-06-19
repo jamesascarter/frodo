@@ -49,6 +49,11 @@ except redis.ResponseError as e:
         raise
     logger.info(f"No existing index '{INDEX_NAME}' to drop")
 
+# Clear entire database (much faster than deleting keys one by one)
+logger.info("Clearing entire Redis database...")
+r.flushdb()
+logger.info("Database cleared successfully")
+
 # Create new index with proper settings
 try:
     r.execute_command(
