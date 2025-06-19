@@ -1,6 +1,6 @@
 import wandb
 import torch
-import models_fixed as models
+import models as models
 import dataset
 import datetime
 import pickle
