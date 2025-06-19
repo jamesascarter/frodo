@@ -12,9 +12,9 @@ import logging
 import os
 
 
-#
-#
-#
+# Create logs directory if it doesn't exist
+os.makedirs('./logs', exist_ok=True)
+
 # Set up logging
 ts = datetime.datetime.now().strftime('%Y_%m_%d__%H_%M_%S')
 logging.basicConfig(
@@ -26,9 +26,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
-# Create logs directory if it doesn't exist
-os.makedirs('./logs', exist_ok=True)
 
 torch.manual_seed(42)
 ts = datetime.datetime.now().strftime('%Y_%m_%d__%H_%M_%S')
