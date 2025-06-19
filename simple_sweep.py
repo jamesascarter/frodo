@@ -48,10 +48,11 @@ def train_sweep():
     
     # Training loop
     best_loss = float('inf')
-    for epoch in range(3):  # Reduced epochs for faster sweep
-        epoch_loss = 0.0
-        batch_count = 0
-        
+    total_steps = 0
+    target_steps = 20000
+    running_loss = 0.0
+    
+    while total_steps < target_steps:
         for idx, (inpt, trgs) in enumerate(dl):
             try:
                 inpt, trgs = inpt.to(dev), trgs.to(dev)
@@ -68,27 +69,40 @@ def train_sweep():
                 torch.nn.utils.clip_grad_norm_(w2v.parameters(), max_norm=1.0)
                 opt.step()
                 
-                epoch_loss += loss.item()
-                batch_count += 1
+                total_steps += 1
+                running_loss += loss.item()
                 
-                # Log every 1000 batches
-                if idx % 1000 == 0:
-                    wandb.log({'loss': loss.item(), 'epoch': epoch, 'batch': idx})
+                # Log every 1000 steps
+                if total_steps % 1000 == 0:
+                    avg_loss = running_loss / 1000
+                    wandb.log({
+                        'loss': loss.item(), 
+                        'avg_loss': avg_loss,
+                        'steps': total_steps,
+                        'learning_rate': opt.param_groups[0]['lr']
+                    })
+                    
+                    # Track best loss
+                    if avg_loss < best_loss:
+                        best_loss = avg_loss
+                        torch.save(w2v.state_dict(), f'./checkpoints/sweep_best_{wandb.run.id}.pth')
+                    
+                    running_loss = 0.0
+                
+                # Check if we've reached target steps
+                if total_steps >= target_steps:
+                    break
                 
             except Exception as e:
                 continue
         
-        # Calculate average loss
-        avg_loss = epoch_loss / batch_count if batch_count > 0 else float('inf')
-        wandb.log({'epoch_loss': avg_loss, 'epoch': epoch})
-        
-        # Track best loss
-        if avg_loss < best_loss:
-            best_loss = avg_loss
-            torch.save(w2v.state_dict(), f'./checkpoints/sweep_best_{wandb.run.id}.pth')
+        # If we've gone through the whole dataset, break
+        if total_steps >= target_steps:
+            break
     
-    wandb.log({'best_loss': best_loss})
-    logger.info(f"Sweep completed. Best loss: {best_loss:.4f}")
+    # Log final metrics
+    wandb.log({'best_loss': best_loss, 'total_steps': total_steps})
+    logger.info(f"Sweep completed. Total steps: {total_steps}, Best loss: {best_loss:.4f}")
 
 
 def main():
@@ -96,7 +110,7 @@ def main():
     
     # Simple sweep config
     sweep_config = {
-        'method': 'random',  # Simple random search
+        'method': 'bayesian',  # Simple random search
         'metric': {
             'name': 'best_loss',
             'goal': 'minimize'
