@@ -8,11 +8,17 @@ import dataset
 import datetime
 import wandb
 import tqdm
+import argparse
 
 
 #
 #
 #
+# Parse command line arguments
+parser = argparse.ArgumentParser(description='Train Towers model')
+parser.add_argument('--epochs', type=int, default=1, help='Number of epochs to train (default: 1)')
+args = parser.parse_args()
+
 torch.manual_seed(42)
 ts = datetime.datetime.now().strftime('%Y_%m_%d__%H_%M_%S')
 
@@ -52,7 +58,7 @@ wandb.init(project='mlx6-week-02-two')
 #
 #
 #
-for epoch in range(1):
+for epoch in range(args.epochs):
   prgs = tqdm.tqdm(dl, desc=f"Epoch {epoch + 1}", leave=False)
   for idx, (qry, pos, neg) in enumerate(prgs):
     qry, pos, neg = qry.to(dev), pos.to(dev), neg.to(dev)
