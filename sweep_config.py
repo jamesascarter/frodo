@@ -1,69 +1,42 @@
 # WandB Sweep Configuration for Word2Vec Model
 
-# Sweep configuration with appropriate hyperparameter ranges
+import wandb
+
+# Define the sweep configuration
 sweep_config = {
-    'method': 'bayes',  # 'grid', 'random', or 'bayes'
+    'method': 'random',  # or 'grid', 'bayes'
+    'name': 'towers-hyperparameter-sweep',
     'metric': {
-        'name': 'best_loss',
+        'name': 'loss',
         'goal': 'minimize'
     },
     'parameters': {
-        # Learning rate - log uniform distribution for better exploration
+        'epochs': {
+            'values': [1, 2, 3]
+        },
+        'batch_size': {
+            'values': [128, 256, 512]
+        },
         'learning_rate': {
-            'min': 0.0001,  # 1e-4
-            'max': 0.01,    # 1e-2
+            'min': 0.0001,
+            'max': 0.01,
             'distribution': 'log_uniform'
         },
-        
-        # Batch size - discrete values
-        'batch_size': {
-            'values': [512, 1024, 2048]
+        'margin': {
+            'min': 0.1,
+            'max': 0.5,
+            'distribution': 'uniform'
         },
-        
-        # Embedding dimension - discrete values
         'embedding_dim': {
             'values': [64, 128, 256]
-        },
-        
-        # Optimizer choice
-        'optimizer': {
-            'values': ['adam', 'adamw', 'sgd']
-        },
-        
-        # Weight decay for regularization
-        'weight_decay': {
-            'min': 0.0,
-            'max': 0.01,
-            'distribution': 'uniform'
-        },
-        
-        # Gradient clipping threshold
-        'grad_clip': {
-            'min': 0.1,
-            'max': 5.0,
-            'distribution': 'uniform'
-        },
-        
-        # Learning rate scheduler
-        'scheduler': {
-            'values': ['none', 'cosine', 'step']
-        },
-        
-        # Fixed parameters
-        'epochs': {
-            'value': 5
-        },
-        'seed': {
-            'value': 42
-        },
-        'early_stopping': {
-            'value': True
-        },
-        'patience': {
-            'value': 0.1  # 10% tolerance for early stopping
         }
     }
 }
+
+# Initialize the sweep
+sweep_id = wandb.sweep(sweep_config, project='mlx6-week-02-two')
+
+print(f"Sweep ID: {sweep_id}")
 
 # Conditional parameters for step scheduler
 sweep_config['parameters']['step_size'] = {
