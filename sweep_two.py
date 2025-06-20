@@ -11,7 +11,6 @@ def train():
         # Build command with hyperparameters
         cmd = [
             sys.executable, '04_train.two.py',
-            '--epochs', str(config.epochs),
             '--batch_size', str(config.batch_size),
             '--learning_rate', str(config.learning_rate),
             '--margin', str(config.margin)
@@ -29,9 +28,6 @@ sweep_config = {
         'goal': 'minimize'
     },
     'parameters': {
-        'epochs': {
-            'values': [1, 2, 3]
-        },
         'batch_size': {
             'values': [128, 256, 512]
         },
