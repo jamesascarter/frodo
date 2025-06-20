@@ -56,6 +56,8 @@ class DocTower(torch.nn.Module):
     self.mlp = torch.nn.Sequential(
       torch.nn.Linear(in_features=emb, out_features=emb),
       torch.nn.ReLU(),
+      torch.nn.Linear(in_features=emb, out_features=emb),
+      torch.nn.ReLU(),
       torch.nn.Linear(in_features=emb, out_features=emb)
     );
 

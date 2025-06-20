@@ -17,15 +17,28 @@ dev = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #
 #
 #
+w2v_files = glob.glob('./checkpoints/*.w2v.pth')
+if not w2v_files:
+    raise FileNotFoundError("No Word2Vec checkpoints found")
+w2v_checkpoint = max(w2v_files, key=os.path.getctime)
+logger.info(f"Found latest Word2Vec checkpoint: {w2v_checkpoint}")
+
 w2v = models.SkipGram(voc=len(words_to_ids), emb=128).to(dev)
-w2v.load_state_dict(torch.load('./checkpoints/2025_02_06__18_31_03.0.70000.w2v.pth'))
+w2v.load_state_dict(torch.load(w2v_checkpoint))
 
 
 #
 #
 #
+
+two_files = glob.glob('./checkpoints/*.two.pth')
+if not two_files:
+    raise FileNotFoundError("No Two checkpoints found")
+two_checkpoint = max(two_files, key=os.path.getctime)
+logger.info(f"Found latest Word2Vec checkpoint: {two_checkpoint}")
+
 two = models.Towers(emb=128).to(dev)
-two.load_state_dict(torch.load('./checkpoints/2025_02_06__19_08_18.0.350.two.pth'))
+two.load_state_dict(torch.load(two_checkpoint))
 
 
 #
