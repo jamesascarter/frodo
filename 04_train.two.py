@@ -51,7 +51,7 @@ w2v_checkpoint = max(w2v_files, key=os.path.getctime)
 logger.info(f"Found latest Word2Vec checkpoint: {w2v_checkpoint}")
 
 # Load w2v model (assuming it's defined in models)
-w2v = models.Word2Vec()  # You'll need to adjust this based on your actual model
+w2v = models.SkipGram(voc=len(words_to_ids), emb=args.embedding_dim)  # You'll need to adjust this based on your actual model
 w2v.load_state_dict(torch.load(w2v_checkpoint))
 
 
