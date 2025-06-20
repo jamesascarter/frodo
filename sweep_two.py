@@ -45,7 +45,7 @@ def train():
     w2v.load_state_dict(checkpoint)
     
     # Create dataset and dataloader
-    ds = dataset.Triplets(w2v.emb, words_to_ids, device=dev)
+    ds = dataset.Triplets(w2v.emb, words_to_ids)
     dl = torch.utils.data.DataLoader(ds, batch_size=config.batch_size, shuffle=True)
     
     # Create Towers model
