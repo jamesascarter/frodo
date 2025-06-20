@@ -8,4 +8,4 @@ scikit-learn
 argparse
 redis
 dotenv
-glob
+logger

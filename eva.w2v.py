@@ -5,6 +5,11 @@ import torch
 import pickle
 import models
 import glob
+import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 #
